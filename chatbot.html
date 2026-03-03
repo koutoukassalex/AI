@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local AI Chatbot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0d0f17;
+            --surface: #161926;
+            --surface2: #1e2235;
+            --border: rgba(255, 255, 255, 0.07);
+            --accent: #7c6af7;
+            --accent2: #5eead4;
+            --text: #e8eaf0;
+            --text-muted: #7a8099;
+            --user-bubble: linear-gradient(135deg, #7c6af7, #5b4fd1);
+            --ai-bubble: #1e2235;
+            --radius: 18px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px 0;
+            overflow: hidden;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding: 0 16px 10px;
+        }
+
+        .new-chat-btn {
+            margin: 0 12px 12px;
+            padding: 9px 14px;
+            background: linear-gradient(135deg, var(--accent), #5b4fd1);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: opacity 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            opacity: 0.85;
+        }
+
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px;
+        }
+
+        .sessions-list::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .sessions-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .session-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            gap: 6px;
+            margin-bottom: 2px;
+            transition: background 0.15s;
+        }
+
+        .session-item:hover {
+            background: var(--surface2);
+        }
+
+        .session-item.active {
+            background: rgba(124, 106, 247, 0.15);
+            border: 1px solid rgba(124, 106, 247, 0.2);
+        }
+
+        .session-name {
+            font-size: 13px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        .session-delete {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .session-item:hover .session-delete {
+            opacity: 1;
+        }
+
+        .session-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border);
+            padding: 12px 12px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .sidebar-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s;
+            width: 100%;
+        }
+
+        .sidebar-btn:hover {
+            background: var(--surface2);
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        /* ── Main ── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: rgba(22, 25, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+
+        .header-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .header-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .model-select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .model-select:hover {
+            border-color: var(--accent);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+            transition: all 0.3s;
+        }
+
+        .status-dot.online {
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+        }
+
+        /* ── Messages ── */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* ── Welcome ── */
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin: auto;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .welcome-icon {
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            animation: float 3s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(124, 106, 247, 0.3);
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-8px)
+            }
+        }
+
+        .welcome h2 {
+            font-size: 21px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome p {
+            font-size: 13px;
+            color: var(--text-muted);
+            max-width: 340px;
+            line-height: 1.6;
+        }
+
+        .welcome-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .chip {
+            padding: 7px 13px;
+            border-radius: 20px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chip:hover {
+            border-color: var(--accent);
+            color: var(--text);
+            background: rgba(124, 106, 247, 0.1);
+        }
+
+        /* ── Message Bubble ── */
+        .msg {
+            display: flex;
+            gap: 10px;
+            animation: fadeUp 0.3s ease both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .msg.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .msg.user .avatar {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+        }
+
+        .msg.ai .avatar {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+        }
+
+        .bubble {
+            max-width: 75%;
+            border-radius: var(--radius);
+            padding: 11px 15px;
+            font-size: 14px;
+            line-height: 1.65;
+            position: relative;
+        }
+
+        .msg.user .bubble {
+            background: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+            color: #fff;
+        }
+
+        .msg.ai .bubble {
+            background: var(--ai-bubble);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .bubble img.attached-img {
+            max-width: 240px;
+            max-height: 180px;
+            border-radius: 10px;
+            display: block;
+            margin-bottom: 8px;
+            object-fit: cover;
+        }
+
+        .bubble-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .bubble-text code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        /* ── Code blocks ── */
+        .code-block {
+            margin: 10px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #0d0f17;
+        }
+
+        .code-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .code-lang {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .code-block-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .code-action-btn {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .code-action-btn:hover {
+            color: var(--text);
+            border-color: var(--accent);
+            background: rgba(124, 106, 247, 0.15);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 14px 16px;
+            overflow-x: auto;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            color: #cdd6f4;
+            white-space: pre;
+        }
+
+        /* ── Save file modal ── */
+        .save-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 600;
+            backdrop-filter: blur(4px);
+        }
+
+        .save-modal-overlay.active {
+            display: flex;
+        }
+
+        .save-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 360px;
+            max-width: 92vw;
+        }
+
+        .save-modal h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        .save-modal label {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .save-modal input[type=text] {
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .save-modal input[type=text]:focus {
+            border-color: var(--accent);
+        }
+
+        .save-modal-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .save-modal-confirm {
+            flex: 1;
+            padding: 9px;
+            border-radius: 9px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), #5b4fd1);
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .save-modal-confirm:hover {
+            opacity: 0.85;
+        }
+
+        .save-modal-cancel2 {
+            padding: 9px 16px;
+            border-radius: 9px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .save-modal-cancel2:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .bubble-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .msg:hover .bubble-actions {
+            opacity: 1;
+        }
+
+        .bubble-btn {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .bubble-btn:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        /* ── Typing indicator ── */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 4px 0;
+        }
+
+        .typing-indicator span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: bounce 1.2s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4
+            }
+
+            30% {
+                transform: translateY(-6px);
+                opacity: 1
+            }
+        }
+
+        /* ── Image preview strip ── */
+        .image-preview-strip {
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .image-preview-strip.active {
+            display: flex;
+        }
+
+        .preview-thumb {
+            position: relative;
+            width: 54px;
+            height: 54px;
+        }
+
+        .preview-thumb img {
+            width: 54px;
+            height: 54px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Input area ── */
+        .input-area {
+            padding: 14px 18px;
+            background: rgba(22, 25, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 9px 12px;
+            transition: border-color 0.2s;
+        }
+
+        .input-row:focus-within {
+            border-color: var(--accent);
+        }
+
+        .input-row textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            max-height: 140px;
+            min-height: 22px;
+            overflow-y: auto;
+        }
+
+        .input-row textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .upload-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        .upload-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(124, 106, 247, 0.1);
+        }
+
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, var(--accent), #5b4fd1);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 12px rgba(124, 106, 247, 0.4);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn:active {
+            transform: scale(0.97);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .hint {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* ── Drop overlay ── */
+        .drop-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(124, 106, 247, 0.15);
+            border: 3px dashed var(--accent);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            backdrop-filter: blur(4px);
+        }
+
+        .drop-overlay.active {
+            display: flex;
+        }
+
+        .drop-overlay p {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--accent2);
+            pointer-events: none;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #22c55e;
+            color: #fff;
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 999;
+            max-width: 90vw;
+            text-align: center;
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── Export modal ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 500;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            width: 340px;
+            max-width: 90vw;
+        }
+
+        .modal h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .modal-btn {
+            padding: 11px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.15s;
+        }
+
+        .modal-btn:hover {
+            border-color: var(--accent);
+            background: rgba(124, 106, 247, 0.1);
+        }
+
+        .modal-btn .btn-icon-lg {
+            font-size: 20px;
+            width: 32px;
+            text-align: center;
+        }
+
+        .modal-btn .btn-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .modal-cancel {
+            margin-top: 8px;
+            width: 100%;
+            padding: 9px;
+            border-radius: 9px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+
+        .modal-cancel:hover {
+            color: var(--text);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Save File Modal -->
+    <div class="save-modal-overlay" id="saveFileModal">
+        <div class="save-modal">
+            <h3>📁 Save as File</h3>
+            <label for="saveFileName">File name</label>
+            <input type="text" id="saveFileName" placeholder="e.g. script.py" />
+            <div class="save-modal-row">
+                <button class="save-modal-confirm" id="saveFileConfirm">Download</button>
+                <button class="save-modal-cancel2" id="saveFileCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="drop-overlay" id="dropOverlay">
+        <p>🖼️ Drop image here</p>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <!-- Export modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <h3>💾 Save Conversation</h3>
+            <div class="modal-btns">
+                <button class="modal-btn" onclick="exportAs('txt')">
+                    <span class="btn-icon-lg">📄</span>
+                    <div>
+                        <div>Save as Text (.txt)</div>
+                        <div class="btn-desc">Plain text, easy to read</div>
+                    </div>
+                </button>
+                <button class="modal-btn" onclick="exportAs('json')">
+                    <span class="btn-icon-lg">📦</span>
+                    <div>
+                        <div>Save as JSON (.json)</div>
+                        <div class="btn-desc">Full data, can be reimported later</div>
+                    </div>
+                </button>
+                <button class="modal-btn" onclick="exportAs('md')">
+                    <span class="btn-icon-lg">📝</span>
+                    <div>
+                        <div>Save as Markdown (.md)</div>
+                        <div class="btn-desc">Formatted, great for notes</div>
+                    </div>
+                </button>
+            </div>
+            <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-title">Conversations</div>
+            <button class="new-chat-btn" id="newChatBtn">➕ New Chat</button>
+            <div class="sessions-list" id="sessionsList"></div>
+            <div class="sidebar-footer">
+                <button class="sidebar-btn" id="saveBtn">💾 Save Conversation</button>
+                <button class="sidebar-btn" id="importBtn">📂 Import JSON</button>
+                <input type="file" id="importInput" accept=".json" style="display:none" />
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="main">
+            <header>
+                <div class="header-left">
+                    <div class="logo">🤖</div>
+                    <div>
+                        <div class="header-title">Local AI Chatbot</div>
+                        <div class="header-sub" id="statusText">Connecting to Ollama…</div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="status-dot" id="statusDot"></div>
+                    <select class="model-select" id="modelSelect">
+                        <option value="llava">llava</option>
+                        <option value="llava:13b">llava:13b</option>
+                        <option value="bakllava">bakllava</option>
+                        <option value="moondream">moondream</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="messages" id="messages">
+                <div class="welcome" id="welcome">
+                    <div class="welcome-icon">🤖</div>
+                    <h2>Hello! I'm your local AI</h2>
+                    <p>Ask me anything or upload an image. Your chats are saved automatically in the sidebar.</p>
+                    <div class="welcome-chips">
+                        <div class="chip" onclick="sendChip(this)">What can you do?</div>
+                        <div class="chip" onclick="sendChip(this)">Describe an image for me</div>
+                        <div class="chip" onclick="sendChip(this)">Tell me a fun fact</div>
+                        <div class="chip" onclick="sendChip(this)">Write a short poem</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="image-preview-strip" id="previewStrip"></div>
+
+            <div class="input-area">
+                <div class="input-row">
+                    <textarea id="msgInput" placeholder="Message… (Shift+Enter for new line)" rows="1"
+                        autofocus></textarea>
+                    <div class="input-actions">
+                        <label class="upload-btn" title="Attach image">
+                            🖼️
+                            <input type="file" id="fileInput" accept="image/*" multiple style="display:none" />
+                        </label>
+                        <button class="send-btn" id="sendBtn">➤</button>
+                    </div>
+                </div>
+                <div class="hint">Powered by <strong>Ollama</strong> • Chats auto-saved locally</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Constants & State
+        // ──────────────────────────────────────────────────────────────────────────
+        const OLLAMA_URL = 'http://localhost:11434';
+        const STORAGE_KEY = 'localai_sessions';
+
+        let sessions = [];        // [{id, name, model, messages: [{role,content,images?,dataUrls?}], createdAt}]
+        let activeId = null;      // current session id
+        let history = [];         // current conversation for Ollama API
+        let pending = [];         // queued images {b64, dataUrl, name}
+        let isLoading = false;
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  DOM
+        // ──────────────────────────────────────────────────────────────────────────
+        const messagesEl = document.getElementById('messages');
+        const msgInput = document.getElementById('msgInput');
+        const fileInput = document.getElementById('fileInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const previewStrip = document.getElementById('previewStrip');
+        const modelSelect = document.getElementById('modelSelect');
+        const dropOverlay = document.getElementById('dropOverlay');
+        const toastEl = document.getElementById('toast');
+        const sessionsList = document.getElementById('sessionsList');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const importBtn = document.getElementById('importBtn');
+        const importInput = document.getElementById('importInput');
+        const exportModal = document.getElementById('exportModal');
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Session persistence
+        // ──────────────────────────────────────────────────────────────────────────
+        function loadSessions() {
+            try { sessions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+            catch { sessions = []; }
+        }
+
+        function saveSessions() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+        }
+
+        function getActiveSession() {
+            return sessions.find(s => s.id === activeId) || null;
+        }
+
+        function createSession(name) {
+            const session = {
+                id: Date.now().toString(),
+                name: name || 'New Chat',
+                model: modelSelect.value,
+                messages: [],
+                createdAt: new Date().toISOString()
+            };
+            sessions.unshift(session);
+            saveSessions();
+            return session;
+        }
+
+        function deleteSession(id) {
+            sessions = sessions.filter(s => s.id !== id);
+            saveSessions();
+            if (activeId === id) {
+                if (sessions.length > 0) loadSession(sessions[0].id);
+                else startNewChat();
+            }
+            renderSidebar();
+        }
+
+        function loadSession(id) {
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
+            activeId = id;
+            history = session.messages.map(m => ({ role: m.role, content: m.content, images: m.images }));
+            modelSelect.value = session.model || 'llava';
+            renderMessages(session.messages);
+            renderSidebar();
+        }
+
+        function startNewChat() {
+            activeId = null;
+            history = [];
+            pending = [];
+            renderPreview();
+            messagesEl.innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">🤖</div>
+      <h2>Hello! I'm your local AI</h2>
+      <p>Ask me anything or upload an image. Your chats are saved automatically in the sidebar.</p>
+      <div class="welcome-chips">
+        <div class="chip" onclick="sendChip(this)">What can you do?</div>
+        <div class="chip" onclick="sendChip(this)">Describe an image for me</div>
+        <div class="chip" onclick="sendChip(this)">Tell me a fun fact</div>
+        <div class="chip" onclick="sendChip(this)">Write a short poem</div>
+      </div>
+    </div>`;
+            renderSidebar();
+        }
+
+        function renderSidebar() {
+            sessionsList.innerHTML = '';
+            if (sessions.length === 0) {
+                sessionsList.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 12px">No saved chats yet</div>`;
+                return;
+            }
+            sessions.forEach(s => {
+                const item = document.createElement('div');
+                item.className = 'session-item' + (s.id === activeId ? ' active' : '');
+                item.innerHTML = `
+      <span class="session-name" title="${s.name}">💬 ${s.name}</span>
+      <button class="session-delete" title="Delete">✕</button>`;
+                item.querySelector('.session-name').onclick = () => loadSession(s.id);
+                item.querySelector('.session-delete').onclick = (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete "${s.name}"?`)) deleteSession(s.id);
+                };
+                sessionsList.appendChild(item);
+            });
+        }
+
+        function renderMessages(messages) {
+            messagesEl.innerHTML = '';
+            messages.forEach(m => {
+                if (m.role === 'user') {
+                    appendUserBubble(m.content, m.dataUrls || [], false);
+                } else if (m.role === 'assistant') {
+                    renderAIBubbleStatic(m.content);
+                }
+            });
+            scrollToBottom();
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Export / Import
+        // ──────────────────────────────────────────────────────────────────────────
+        function openModal() { exportModal.classList.add('active'); }
+        function closeModal() { exportModal.classList.remove('active'); }
+
+        function exportAs(format) {
+            closeModal();
+            const session = getActiveSession();
+            if (!session || session.messages.length === 0) {
+                showToast('No messages to save', 'error'); return;
+            }
+            const name = session.name.replace(/[^a-z0-9]/gi, '_');
+            const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+            let content = '', ext = format, mime = 'text/plain';
+
+            if (format === 'txt') {
+                content = `Conversation: ${session.name}\nDate: ${new Date().toLocaleString()}\nModel: ${session.model}\n${'─'.repeat(40)}\n\n`;
+                session.messages.forEach(m => {
+                    content += `[${m.role === 'user' ? 'You' : 'AI'}]\n${m.content}\n\n`;
+                });
+            } else if (format === 'json') {
+                const exportData = { ...session };
+                delete exportData.messages;
+                exportData.messages = session.messages.map(m => ({ role: m.role, content: m.content }));
+                content = JSON.stringify(exportData, null, 2);
+                mime = 'application/json';
+            } else if (format === 'md') {
+                content = `# ${session.name}\n*${new Date().toLocaleString()} | Model: ${session.model}*\n\n---\n\n`;
+                session.messages.forEach(m => {
+                    content += m.role === 'user'
+                        ? `**You:** ${m.content}\n\n`
+                        : `**AI:** ${m.content}\n\n---\n\n`;
+                });
+            }
+
+            const blob = new Blob([content], { type: mime });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${name}_${date}.${ext}`;
+            a.click();
+            showToast('Saved! ✅');
+        }
+
+        importBtn.onclick = () => importInput.click();
+        importInput.addEventListener('change', () => {
+            const file = importInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.id || !data.messages) throw new Error();
+                    data.id = Date.now().toString(); // new id to avoid conflicts
+                    sessions.unshift(data);
+                    saveSessions();
+                    renderSidebar();
+                    loadSession(data.id);
+                    showToast('Conversation imported! ✅');
+                } catch {
+                    showToast('Invalid file', 'error');
+                }
+            };
+            reader.readAsText(file);
+            importInput.value = '';
+        });
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Ollama status
+        // ──────────────────────────────────────────────────────────────────────────
+        async function checkOllama() {
+            try {
+                const r = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
+                if (r.ok) {
+                    const data = await r.json();
+                    statusDot.classList.add('online');
+                    statusText.textContent = 'Ollama connected ✓';
+                    if (data.models && data.models.length > 0) {
+                        const current = modelSelect.value;
+                        modelSelect.innerHTML = '';
+                        data.models.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.name; opt.textContent = m.name;
+                            if (m.name === current || m.name.startsWith(current)) opt.selected = true;
+                            modelSelect.appendChild(opt);
+                        });
+                    }
+                }
+            } catch {
+                statusDot.classList.remove('online');
+                statusText.textContent = 'Ollama offline';
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Input / UX
+        // ──────────────────────────────────────────────────────────────────────────
+        msgInput.addEventListener('input', () => {
+            msgInput.style.height = 'auto';
+            msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+        });
+
+        msgInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isLoading) send(); }
+        });
+
+        sendBtn.addEventListener('click', () => { if (!isLoading) send(); });
+        newChatBtn.addEventListener('click', startNewChat);
+        saveBtn.addEventListener('click', () => {
+            const session = getActiveSession();
+            if (!session || session.messages.length === 0) { showToast('Nothing to save yet', 'error'); return; }
+            openModal();
+        });
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Image handling
+        // ──────────────────────────────────────────────────────────────────────────
+        fileInput.addEventListener('change', () => { Array.from(fileInput.files).forEach(addImage); fileInput.value = ''; });
+
+        function addImage(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                pending.push({ b64: e.target.result.split(',')[1], dataUrl: e.target.result, name: file.name });
+                renderPreview();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderPreview() {
+            previewStrip.innerHTML = '';
+            if (pending.length === 0) { previewStrip.classList.remove('active'); return; }
+            previewStrip.classList.add('active');
+            pending.forEach((img, i) => {
+                const wrap = document.createElement('div'); wrap.className = 'preview-thumb';
+                const el = document.createElement('img'); el.src = img.dataUrl; el.alt = img.name;
+                const rm = document.createElement('button'); rm.className = 'preview-remove'; rm.textContent = '×';
+                rm.onclick = () => { pending.splice(i, 1); renderPreview(); };
+                wrap.appendChild(el); wrap.appendChild(rm); previewStrip.appendChild(wrap);
+            });
+        }
+
+        // Drag & drop
+        let dragCount = 0;
+        document.addEventListener('dragenter', e => { if (e.dataTransfer.types.includes('Files')) { dragCount++; if (dragCount === 1) dropOverlay.classList.add('active'); } });
+        document.addEventListener('dragleave', () => { dragCount--; if (dragCount <= 0) { dragCount = 0; dropOverlay.classList.remove('active'); } });
+        document.addEventListener('dragover', e => e.preventDefault());
+        document.addEventListener('drop', e => {
+            e.preventDefault(); dragCount = 0; dropOverlay.classList.remove('active');
+            Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach(addImage);
+        });
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Send message
+        // ──────────────────────────────────────────────────────────────────────────
+        function sendChip(chip) { msgInput.value = chip.textContent.trim(); send(); }
+
+        async function send() {
+            const text = msgInput.value.trim();
+            const images = [...pending];
+            if (!text && images.length === 0) return;
+            if (isLoading) return;
+
+            msgInput.value = ''; msgInput.style.height = 'auto';
+            pending = []; renderPreview();
+
+            // Hide welcome
+            const w = document.getElementById('welcome');
+            if (w) w.style.display = 'none';
+
+            // Ensure we have an active session
+            if (!activeId) {
+                const session = createSession(text.slice(0, 36) + (text.length > 36 ? '…' : ''));
+                activeId = session.id;
+                renderSidebar();
+            }
+
+            // Build API message
+            const userMsg = { role: 'user', content: text };
+            if (images.length > 0) userMsg.images = images.map(i => i.b64);
+            history.push(userMsg);
+
+            // Save to session (with dataUrls for display, without for storage size)
+            const session = getActiveSession();
+            const storedMsg = { role: 'user', content: text, dataUrls: images.map(i => i.dataUrl) };
+            if (images.length > 0) storedMsg.images = images.map(i => i.b64);
+            session.messages.push(storedMsg);
+
+            appendUserBubble(text, images.map(i => i.dataUrl), true);
+
+            isLoading = true; sendBtn.disabled = true;
+            const aiEl = appendAIBubble();
+
+            try {
+                const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: modelSelect.value, messages: history, stream: true })
+                });
+
+                if (!response.ok) throw new Error(`Ollama error ${response.status}`);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let aiText = '';
+                aiEl.querySelector('.typing-indicator').style.display = 'none';
+                const streamEl = aiEl.querySelector('.bubble-text');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    for (const line of decoder.decode(value).split('\n')) {
+                        if (!line.trim()) continue;
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.message?.content) { aiText += json.message.content; streamEl.textContent = aiText; scrollToBottom(); }
+                        } catch { }
+                    }
+                }
+
+                history.push({ role: 'assistant', content: aiText });
+                session.messages.push({ role: 'assistant', content: aiText });
+
+                // Auto-rename session after first AI reply if name is still default
+                if (session.messages.length === 2 && session.name === 'New Chat') {
+                    session.name = text.slice(0, 36) + (text.length > 36 ? '…' : '');
+                    renderSidebar();
+                }
+
+                saveSessions();
+
+                // Render markdown (code blocks etc.) after streaming
+                const bubbleTextEl = aiEl.querySelector('.bubble-text');
+                renderMarkdown(bubbleTextEl, aiText);
+
+                const copyBtn = aiEl.querySelector('.copy-btn');
+                if (copyBtn) { copyBtn.style.display = 'inline-block'; copyBtn.onclick = () => copyText(aiText, copyBtn); }
+                const saveBtn2 = aiEl.querySelector('.save-file-btn');
+                if (saveBtn2) { saveBtn2.style.display = 'inline-block'; saveBtn2.onclick = () => openSaveFileModal(aiText); }
+
+            } catch (err) {
+                const streamEl = aiEl.querySelector('.bubble-text');
+                aiEl.querySelector('.typing-indicator').style.display = 'none';
+                if (err.message.includes('fetch') || err.message.includes('NetworkError')) {
+                    streamEl.innerHTML = `⚠️ Cannot reach Ollama.<br><br><strong>Fix:</strong><br>1. Run <code>ollama serve</code><br>2. Set <code>OLLAMA_ORIGINS=*</code><br>3. Refresh`;
+                } else {
+                    streamEl.textContent = `⚠️ Error: ${err.message}`;
+                }
+                session.messages.pop();
+                history.pop();
+                saveSessions();
+            } finally {
+                isLoading = false; sendBtn.disabled = false; scrollToBottom();
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  DOM helpers
+        // ──────────────────────────────────────────────────────────────────────────
+        function appendUserBubble(text, dataUrls, animate) {
+            const msg = document.createElement('div');
+            msg.className = 'msg user' + (animate ? '' : ' no-anim');
+            let imgHTML = dataUrls.map(url => `<img class="attached-img" src="${url}" alt="image" />`).join('');
+            msg.innerHTML = `<div class="avatar">🧑</div><div class="bubble">${imgHTML}<div class="bubble-text">${escHtml(text)}</div></div>`;
+            messagesEl.appendChild(msg); scrollToBottom(); return msg;
+        }
+
+        // Also render markdown when loading saved sessions
+        function renderAIBubbleStatic(content) {
+            const msg = document.createElement('div'); msg.className = 'msg ai';
+            msg.innerHTML = `
+    <div class="avatar">🤖</div>
+    <div class="bubble">
+      <div class="bubble-text"></div>
+      <div class="bubble-actions">
+        <button class="bubble-btn copy-btn">📋 Copy</button>
+        <button class="bubble-btn save-file-btn">📁 Save File</button>
+      </div>
+    </div>`;
+            renderMarkdown(msg.querySelector('.bubble-text'), content);
+            msg.querySelector('.copy-btn').onclick = () => copyText(content, msg.querySelector('.copy-btn'));
+            msg.querySelector('.save-file-btn').onclick = () => openSaveFileModal(content);
+            messagesEl.appendChild(msg); return msg;
+        }
+
+        function appendAIBubble() {
+            const msg = document.createElement('div'); msg.className = 'msg ai';
+            msg.innerHTML = `
+    <div class="avatar">🤖</div>
+    <div class="bubble">
+      <div class="typing-indicator"><span></span><span></span><span></span></div>
+      <div class="bubble-text"></div>
+      <div class="bubble-actions">
+        <button class="bubble-btn copy-btn" style="display:none">📋 Copy</button>
+        <button class="bubble-btn save-file-btn" style="display:none">📁 Save File</button>
+      </div>
+    </div>`;
+            messagesEl.appendChild(msg); scrollToBottom(); return msg;
+        }
+
+        function scrollToBottom() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+        function escHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+
+        function copyText(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const o = btn.textContent; btn.textContent = '✅ Copied!';
+                setTimeout(() => btn.textContent = o, 1500);
+            });
+        }
+
+        function showToast(msg, type) {
+            toastEl.textContent = msg;
+            toastEl.className = 'toast' + (type === 'error' ? ' error' : '') + ' show';
+            setTimeout(() => toastEl.classList.remove('show'), 2500);
+        }
+
+        // Close export modal on overlay click
+        exportModal.addEventListener('click', e => { if (e.target === exportModal) closeModal(); });
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  renderMarkdown — renders code fences as styled blocks with Copy+Save
+        // ──────────────────────────────────────────────────────────────────────────
+        function renderMarkdown(container, text) {
+            container.innerHTML = '';
+            // Split on fenced code blocks: ```lang\ncode\n```
+            const parts = text.split(/(```[\s\S]*?```)/g);
+            parts.forEach(part => {
+                const fenceMatch = part.match(/^```([\w+-]*)\n?([\s\S]*?)```$/);
+                if (fenceMatch) {
+                    const lang = fenceMatch[1] || 'text';
+                    const code = fenceMatch[2];
+                    const block = document.createElement('div');
+                    block.className = 'code-block';
+                    block.innerHTML = `
+                        <div class="code-block-header">
+                            <span class="code-lang">${escHtmlPlain(lang)}</span>
+                            <div class="code-block-actions">
+                                <button class="code-action-btn">📋 Copy</button>
+                                <button class="code-action-btn">📁 Save</button>
+                            </div>
+                        </div>
+                        <pre>${escHtmlPlain(code)}</pre>`;
+                    const [copyB, saveB] = block.querySelectorAll('.code-action-btn');
+                    copyB.onclick = () => {
+                        navigator.clipboard.writeText(code).then(() => {
+                            const o = copyB.textContent; copyB.textContent = '✅ Copied!';
+                            setTimeout(() => copyB.textContent = o, 1500);
+                        });
+                    };
+                    // Suggest filename based on language
+                    const extMap = {
+                        python: 'py', py: 'py', javascript: 'js', js: 'js', typescript: 'ts', ts: 'ts',
+                        html: 'html', css: 'css', java: 'java', cpp: 'cpp', c: 'c', cs: 'cs', go: 'go',
+                        rust: 'rs', php: 'php', ruby: 'rb', bash: 'sh', sh: 'sh', sql: 'sql', json: 'json',
+                        yaml: 'yaml', yml: 'yml', xml: 'xml', markdown: 'md', md: 'md'
+                    };
+                    const ext = extMap[lang.toLowerCase()] || 'txt';
+                    saveB.onclick = () => openSaveFileModal(code, `output.${ext}`);
+                    container.appendChild(block);
+                } else {
+                    // Plain text segment — render inline `code` and line breaks
+                    const span = document.createElement('span');
+                    span.className = 'bubble-text-plain';
+                    span.innerHTML = escHtmlPlain(part)
+                        .replace(/`([^`]+)`/g, '<code>$1</code>')
+                        .replace(/\n/g, '<br>');
+                    container.appendChild(span);
+                }
+            });
+        }
+
+        function escHtmlPlain(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Save File Modal
+        // ──────────────────────────────────────────────────────────────────────────
+        const saveFileModal = document.getElementById('saveFileModal');
+        const saveFileNameEl = document.getElementById('saveFileName');
+        const saveFileConfirmBtn = document.getElementById('saveFileConfirm');
+        const saveFileCancelBtn = document.getElementById('saveFileCancel');
+        let _pendingSaveContent = '';
+
+        function openSaveFileModal(content, suggestedName) {
+            _pendingSaveContent = content;
+            saveFileNameEl.value = suggestedName || 'ai-response.txt';
+            saveFileModal.classList.add('active');
+            setTimeout(() => { saveFileNameEl.focus(); saveFileNameEl.select(); }, 50);
+        }
+
+        function closeSaveFileModal() { saveFileModal.classList.remove('active'); }
+
+        saveFileConfirmBtn.addEventListener('click', () => {
+            const name = saveFileNameEl.value.trim() || 'ai-response.txt';
+            const blob = new Blob([_pendingSaveContent], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            closeSaveFileModal();
+            showToast('File saved! ✅');
+        });
+
+        saveFileCancelBtn.addEventListener('click', closeSaveFileModal);
+        saveFileModal.addEventListener('click', e => { if (e.target === saveFileModal) closeSaveFileModal(); });
+        saveFileNameEl.addEventListener('keydown', e => { if (e.key === 'Enter') saveFileConfirmBtn.click(); });
+
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Init
+        // ──────────────────────────────────────────────────────────────────────────
+        loadSessions();
+        renderSidebar();
+        checkOllama();
+        setInterval(checkOllama, 15000);
+    </script>
+</body>
+
+</html>
