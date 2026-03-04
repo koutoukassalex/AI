@@ -498,9 +498,10 @@
 
     <script>
         // --- Core Essentials ---
-        const OLLAMA_URL_KEY = 'localai_ollama_url';
+        const OLLAMA_URL_KEY = 'ollama_url';
         const STORAGE_KEY = 'localai_sessions';
         const AUTH_KEY = 'localai_authenticated';
+        const LAST_MODEL_KEY = 'localai_last_model';
         const DEFAULT_URL = 'https://09vq1p80-11434.uks1.devtunnels.ms';
 
         let sessions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -553,9 +554,27 @@
         async function checkConnection() {
             const url = localStorage.getItem(OLLAMA_URL_KEY) || DEFAULT_URL;
             const dot = document.getElementById('statusDot');
+            const modelSelect = document.getElementById('modelSelect');
             try {
                 const res = await fetch(`${url}/api/tags`);
-                dot.className = res.ok ? 'status-dot online' : 'status-dot';
+                if (res.ok) {
+                    dot.className = 'status-dot online';
+                    const data = await res.json();
+                    if (data.models && data.models.length > 0) {
+                        const current = modelSelect.value;
+                        const lastGlobal = localStorage.getItem(LAST_MODEL_KEY);
+                        modelSelect.innerHTML = '';
+                        data.models.forEach(m => {
+                            const opt = document.createElement('option');
+                            opt.value = m.name;
+                            opt.textContent = m.name;
+                            if (m.name === current || m.name === lastGlobal) opt.selected = true;
+                            modelSelect.appendChild(opt);
+                        });
+                    }
+                } else {
+                    dot.className = 'status-dot';
+                }
             } catch {
                 dot.className = 'status-dot';
             }
@@ -563,6 +582,11 @@
 
         const msgInput = document.getElementById('msgInput');
         const chatArea = document.getElementById('chatArea');
+        const modelSelect = document.getElementById('modelSelect');
+
+        modelSelect.onchange = () => {
+            localStorage.setItem(LAST_MODEL_KEY, modelSelect.value);
+        };
 
         msgInput.oninput = () => {
             msgInput.style.height = 'auto';
@@ -570,7 +594,8 @@
         };
 
         function addMessage(role, text) {
-            document.getElementById('welcomeView').style.display = 'none';
+            const welcome = document.getElementById('welcomeView');
+            if (welcome) welcome.style.display = 'none';
             const msgDiv = document.createElement('div');
             msgDiv.className = `msg ${role}`;
             msgDiv.innerHTML = `
@@ -602,7 +627,7 @@
                 const response = await fetch(`${url}/api/chat`, {
                     method: 'POST',
                     body: JSON.stringify({
-                        model: document.getElementById('modelSelect').value,
+                        model: modelSelect.value,
                         messages: history,
                         stream: true
                     })
