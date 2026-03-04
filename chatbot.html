@@ -2272,10 +2272,121 @@
             transform: translateY(-2px);
             background: #f0f0f0;
         }
+
+        /* --- NEW: Auth Overlay --- */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 15, 23, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 20px;
+            width: 360px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .auth-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .auth-input-group {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .auth-input-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--bg-app);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .auth-input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .auth-btn:active {
+            transform: scale(0.98);
+        }
+
+        .auth-error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 
 <body>
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-card">
+            <div id="authLogin">
+                <div class="auth-title">Welcome Back</div>
+                <div class="auth-subtitle">Login to your local session</div>
+                <div class="auth-input-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUser" class="auth-input" placeholder="Username">
+                </div>
+                <div class="auth-input-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" class="auth-input" placeholder="••••••••">
+                </div>
+                <button class="auth-btn" id="loginBtnBtn">Unlock Chat</button>
+                <div id="loginError" class="auth-error">⚠️ Invalid username or password</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Save File Modal -->
     <div class="save-modal-overlay" id="saveFileModal">
@@ -2395,6 +2506,11 @@
                     <li>2. Set <code>$env:OLLAMA_ORIGINS="*"</code> before starting.</li>
                     <li>3. Check if your <code>devtunnel</code> URL is still active.</li>
                 </ul>
+            </div>
+            <div class="settings-group"
+                style="margin-top:20px; border-top:1px solid var(--border); padding-top:20px; text-align:center">
+                <button class="auth-btn" style="background:#ef4444; width:auto; padding:8px 24px"
+                    onclick="handleLogout()">🚪 Logout Account</button>
             </div>
             <div class="settings-btn-row">
                 <button class="settings-cancel-btn" id="settingsCancelBtn">Cancel</button>
@@ -2701,6 +2817,47 @@
     </div>
 
     <script>
+        // ──────────────────────────────────────────────────────────────────────────
+        //  Authentication Logic
+        // ──────────────────────────────────────────────────────────────────────────
+        const AUTH_SESSION_KEY = 'localai_authenticated';
+
+        function checkAuth() {
+            const isAuthenticated = sessionStorage.getItem(AUTH_SESSION_KEY);
+            const overlay = document.getElementById('authOverlay');
+            if (!isAuthenticated) {
+                overlay.style.display = 'flex';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        async function handleLogin() {
+            const userInp = document.getElementById('loginUser').value.trim();
+            const passInp = document.getElementById('loginPass').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (userInp === 'admin' && passInp === '1976') {
+                sessionStorage.setItem(AUTH_SESSION_KEY, 'true');
+                errorEl.style.display = 'none';
+                checkAuth();
+                showToast('Unlocked! ✅');
+            } else {
+                errorEl.style.display = 'block';
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem(AUTH_SESSION_KEY);
+            location.reload();
+        }
+
+        // Run checkAuth immediately
+        checkAuth();
+
+        // Bind events
+        document.getElementById('loginBtnBtn').onclick = handleLogin;
+        document.getElementById('loginPass').onkeydown = e => { if (e.key === 'Enter') handleLogin(); };
         // ──────────────────────────────────────────────────────────────────────────
         //  PWA Support
         // ──────────────────────────────────────────────────────────────────────────
