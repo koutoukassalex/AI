@@ -14,13 +14,18 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <style>
         :root {
             --bg: #09090b;
             --surface: #18181b;
             --surface-elevated: #27272a;
             --accent: #8b5cf6;
+            --accent2: #d946ef;
             --accent-gradient: linear-gradient(135deg, #8b5cf6, #d946ef);
+            --user-bubble: linear-gradient(135deg, #8b5cf6, #d946ef);
+            --ai-bubble: #18181b;
             --text: #fafafa;
             --text-muted: #a1a1aa;
             --border: rgba(255, 255, 255, 0.1);
@@ -646,10 +651,216 @@
             font-size: 0.85rem;
             font-weight: 600;
         }
+
+        /* --- New Features UI --- */
+        .input-row-top {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-strip {
+            display: none;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .preview-strip.active {
+            display: flex;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .search-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--surface-elevated);
+            transition: all 0.2s;
+        }
+
+        .search-toggle.active {
+            color: #5eead4;
+            background: rgba(94, 234, 212, 0.1);
+            box-shadow: 0 0 10px rgba(94, 234, 212, 0.2);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .toast {
+            padding: 0.75rem 1.25rem;
+            background: var(--surface-elevated);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            animation: toastIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .msg-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .msg-btn:hover {
+            color: var(--accent);
+        }
+
+        .attached-img {
+            max-width: 100%;
+            border-radius: 12px;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .web-results {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .webcam-modal {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 1500;
+            display: none;
+            flex-direction: column;
+        }
+
+        .webcam-modal.active {
+            display: flex;
+        }
+
+        #webcamVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .webcam-controls {
+            position: absolute;
+            bottom: 2rem;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            padding: 0 2rem;
+        }
+
+        .cam-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 4px solid #fff;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .cam-close {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 
-<body>
+<body onclick="if(window.speechSynthesis) window.speechSynthesis.resume();">
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="webcam-modal" id="webcamModal">
+        <span class="cam-close" onclick="stopWebcam()">✕</span>
+        <video id="webcamVideo" autoplay playsinline></video>
+        <canvas id="webcamCanvas" style="display:none"></canvas>
+        <div class="webcam-controls">
+            <button class="cam-btn" onclick="capturePhoto()"></button>
+        </div>
+    </div>
 
     <!-- Auth -->
     <div id="authOverlay">
@@ -684,7 +895,19 @@
         </div>
     </main>
 
-    <div class="input-container">
+    <div class="input-area">
+        <div class="preview-strip" id="previewStrip"></div>
+        <div class="input-row-top">
+            <button class="msg-btn" onclick="document.getElementById('fileInput').click()"
+                title="Upload File">📎</button>
+            <button class="msg-btn" onclick="startWebcam()" title="Camera">📷</button>
+            <button class="msg-btn" onclick="toggleVoice()" id="voiceBtn" title="Voice">🎤</button>
+            <div style="flex:1"></div>
+            <div class="search-toggle" id="searchToggle" onclick="toggleSearch()">
+                <span>🌐</span> Web Search
+            </div>
+            <input type="file" id="fileInput" hidden multiple accept="image/*,.pdf,text/*">
+        </div>
         <div class="input-row">
             <textarea id="msgInput" placeholder="Type a message..." rows="1"></textarea>
             <button class="action-btn send-btn" id="sendBtn">➤</button>
@@ -719,6 +942,26 @@
         <div style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div>
                 <label
+                    style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Language
+                    / Γλώσσα</label>
+                <select id="langSelect" class="auth-input" onchange="changeLang()" style="margin-bottom:0">
+                    <option value="en">English 🇺🇸</option>
+                    <option value="el">Ελληνικά 🇬🇷</option>
+                    <option value="es">Español 🇪🇸</option>
+                    <option value="fr">Français 🇫🇷</option>
+                </select>
+            </div>
+
+            <div>
+                <label
+                    style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">System
+                    Prompt</label>
+                <textarea id="systemPrompt" class="auth-input" style="height: 80px; margin-bottom:0"
+                    placeholder="You are a helpful AI assistant..."></textarea>
+            </div>
+
+            <div>
+                <label
                     style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Ollama
                     Server URL</label>
                 <input type="text" id="ollamaUrl" class="auth-input" style="margin-bottom:0">
@@ -729,13 +972,13 @@
                     style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Model
                     Select</label>
                 <select id="modelSelect" class="auth-input" style="margin-bottom:0">
-                    <option value="llama3">llama3</option>
-                    <option value="mistral">mistral</option>
-                    <option value="llava">llava</option>
                 </select>
             </div>
 
             <button class="auth-btn" onclick="saveSettings()" style="margin-top: 1rem;">Save Changes</button>
+            <button class="auth-btn" onclick="clearAllData()"
+                style="background: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 0.5rem;">Clear
+                All Data</button>
             <button class="auth-btn" onclick="logout()" style="background: #ef4444; margin-top: 0.5rem;">Logout</button>
         </div>
     </div>
@@ -765,11 +1008,67 @@
         const AUTH_KEY = 'localai_authenticated';
         const LAST_MODEL_KEY = 'localai_last_model';
         const THEME_KEY = 'localai_theme';
+        const LANG_KEY = 'ai_chatbot_lang';
+        const SYSTEM_PROMPT_KEY = 'localai_system_prompt';
         const DEFAULT_URL = 'https://09vq1p80-11434.uks1.devtunnels.ms';
 
         let sessions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         let activeId = null;
         let history = [];
+        let pending = [];
+        let webSearchEnabled = false;
+        let currentLang = localStorage.getItem(LANG_KEY) || 'en';
+
+        const i18n = {
+            en: {
+                online: "Connected ✓",
+                offline: "Offline ⚠️",
+                welcomeTitle: "Hello! I'm your AI",
+                chatPlaceholder: "Ask me anything...",
+                toastSaved: "Settings saved!",
+                toastCleared: "All data cleared!",
+                toastCam: "Photo captured! 📸",
+                toastVoice: "Listening... 🎤",
+                rename: "Rename",
+                delete: "Delete"
+            },
+            el: {
+                online: "Συνδέθηκε ✓",
+                offline: "Εκτός σύνδεσης ⚠️",
+                welcomeTitle: "Γεια! Είμαι το AI σου",
+                chatPlaceholder: "Ρωτήστε με οτιδήποτε...",
+                toastSaved: "Οι ρυθμίσεις αποθηκεύτηκαν!",
+                toastCleared: "Όλα τα δεδομένα διαγράφηκαν!",
+                toastCam: "Η φωτογραφία ελήφθη! 📸",
+                toastVoice: "Σας ακούω... 🎤",
+                rename: "Μετονομασία",
+                delete: "Διαγραφή"
+            },
+            es: {
+                online: "Conectado ✓",
+                offline: "Desconectado ⚠️",
+                welcomeTitle: "¡Hola! Soy tu AI",
+                chatPlaceholder: "Pregunta lo que quieras...",
+                toastSaved: "¡Ajustes guardados!",
+                toastCleared: "¡Datos borrados!",
+                toastCam: "¡Foto capturada! 📸",
+                toastVoice: "Escuchando... 🎤",
+                rename: "Renombrar",
+                delete: "Eliminar"
+            },
+            fr: {
+                online: "Connecté ✓",
+                offline: "Hors ligne ⚠️",
+                welcomeTitle: "Salut ! Je suis ton IA",
+                chatPlaceholder: "Demandez-moi n'importe quoi...",
+                toastSaved: "Paramètres enregistrés !",
+                toastCleared: "Données effacées !",
+                toastCam: "Photo capturée ! 📸",
+                toastVoice: "J'écoute... 🎤",
+                rename: "Renommer",
+                delete: "Supprimer"
+            }
+        };
 
         const themes = [
             { id: 'default', name: 'Midnight (Default)', colors: ['#09090b', '#8b5cf6', '#fafafa'] },
@@ -794,6 +1093,105 @@
             { id: 'coffee', name: 'Coffee', colors: ['#1c1917', '#78350f', '#fafaf9'] },
             { id: 'royal', name: 'Royal Purple', colors: ['#1e1b4b', '#818cf8', '#eef2ff'] }
         ];
+
+        // --- Toasts ---
+        function showToast(msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<span>💬</span> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Camera & Files ---
+        let stream = null;
+        async function startWebcam() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                document.getElementById('webcamVideo').srcObject = stream;
+                document.getElementById('webcamModal').classList.add('active');
+            } catch (err) {
+                showToast("Camera access denied");
+            }
+        }
+
+        function stopWebcam() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('webcamModal').classList.remove('active');
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('webcamVideo');
+            const canvas = document.getElementById('webcamCanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+            pending.push({ type: 'image', b64: base64, url: canvas.toDataURL() });
+            renderPreview();
+            stopWebcam();
+            showToast(i18n[currentLang].toastCam);
+        }
+
+        function renderPreview() {
+            const strip = document.getElementById('previewStrip');
+            if (pending.length === 0) {
+                strip.classList.remove('active');
+                return;
+            }
+            strip.classList.add('active');
+            strip.innerHTML = pending.map((p, i) => `
+                <div class="preview-item">
+                    ${p.type === 'image' ? `<img src="${p.url}">` : '<div style="font-size:1.5rem;display:flex;align-items:center;justify-content:center;height:100%">📄</div>'}
+                    <div class="preview-remove" onclick="removePending(${i})">✕</div>
+                </div>
+            `).join('');
+        }
+
+        function removePending(i) {
+            pending.splice(i, 1);
+            renderPreview();
+        }
+
+        document.getElementById('fileInput').onchange = async (e) => {
+            for (const file of e.target.files) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        pending.push({ type: 'image', b64: re.target.result.split(',')[1], url: re.target.result });
+                        renderPreview();
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    const reader = new FileReader();
+                    reader.onload = async (re) => {
+                        try {
+                            const pdf = await pdfjsLib.getDocument({ data: re.target.result }).promise;
+                            let text = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const content = await page.getTextContent();
+                                text += content.items.map(it => it.str).join(' ') + '\n';
+                            }
+                            pending.push({ type: 'text', content: text, name: file.name });
+                            renderPreview();
+                        } catch (err) { showToast("Error reading PDF"); }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        pending.push({ type: 'text', content: re.target.result, name: file.name });
+                        renderPreview();
+                    };
+                    reader.readAsText(file);
+                }
+            }
+        };
 
         // --- Themes ---
         function renderThemes() {
@@ -841,17 +1239,99 @@
             location.reload();
         }
 
+        // --- Web Search ---
+        function toggleSearch() {
+            webSearchEnabled = !webSearchEnabled;
+            document.getElementById('searchToggle').classList.toggle('active', webSearchEnabled);
+            showToast(webSearchEnabled ? "Web Search Enabled" : "Web Search Disabled");
+        }
+
+        async function webSearchAsync(query) {
+            try {
+                const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.AbstractText) {
+                    return `Search results for "${query}": ${data.AbstractText}`;
+                }
+                return "";
+            } catch { return ""; }
+        }
+
+        // --- Voice ---
+        const recognition = 'webkitSpeechRecognition' in window ? new webkitSpeechRecognition() : null;
+        if (recognition) {
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.onresult = (e) => {
+                const text = e.results[0][0].transcript;
+                msgInput.value = text;
+                showToast("Captured: " + text.substring(0, 20) + "...");
+            };
+        }
+
+        function toggleVoice() {
+            if (!recognition) {
+                showToast("Voice not supported");
+                return;
+            }
+            try {
+                recognition.start();
+                showToast(i18n[currentLang].toastVoice);
+            } catch { recognition.stop(); }
+        }
+
+        function speak(text) {
+            if (!window.speechSynthesis) return;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang === 'el' ? 'el-GR' : 'en-US';
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- Utils ---
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => showToast("Copied!"));
+        }
+
+        function downloadMarkdown() {
+            const content = history.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n${m.content}`).join('\n\n');
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat-${activeId || 'export'}.md`;
+            a.click();
+        }
+
         // --- Settings ---
         function showSettings() {
             document.getElementById('sheetOverlay').classList.add('active');
             document.getElementById('settingsSheet').classList.add('active');
             document.getElementById('ollamaUrl').value = localStorage.getItem(OLLAMA_URL_KEY) || DEFAULT_URL;
+            document.getElementById('systemPrompt').value = localStorage.getItem(SYSTEM_PROMPT_KEY) || "";
+            document.getElementById('langSelect').value = currentLang;
+        }
+
+        function changeLang() {
+            currentLang = document.getElementById('langSelect').value;
+            localStorage.setItem(LANG_KEY, currentLang);
+            location.reload();
+        }
+
+        function clearAllData() {
+            if (confirm("Delete all chats and settings?")) {
+                localStorage.clear();
+                location.reload();
+            }
         }
 
         function saveSettings() {
             localStorage.setItem(OLLAMA_URL_KEY, document.getElementById('ollamaUrl').value);
+            localStorage.setItem(SYSTEM_PROMPT_KEY, document.getElementById('systemPrompt').value);
             closeSheets();
             checkConnection();
+            showToast(i18n[currentLang].toastSaved);
         }
 
         function closeSheets() {
@@ -866,6 +1346,7 @@
             const url = localStorage.getItem(OLLAMA_URL_KEY) || DEFAULT_URL;
             const dot = document.getElementById('statusDot');
             const modelSelect = document.getElementById('modelSelect');
+            const lang = i18n[currentLang];
             try {
                 const res = await fetch(`${url}/api/tags`);
                 if (res.ok) {
@@ -904,13 +1385,26 @@
             msgInput.style.height = msgInput.scrollHeight + 'px';
         };
 
-        function addMessage(role, text) {
+        function addMessage(role, text, images = []) {
             const welcome = document.getElementById('welcomeView');
             if (welcome) welcome.style.display = 'none';
             const msgDiv = document.createElement('div');
             msgDiv.className = `msg ${role}`;
+
+            let imgHtml = '';
+            if (images && images.length > 0) {
+                imgHtml = images.map(img => `<img src="data:image/jpeg;base64,${img}" class="attached-img">`).join('');
+            }
+
             msgDiv.innerHTML = `
-                <div class="bubble">${marked.parse(text)}</div>
+                <div class="bubble">
+                    ${imgHtml}
+                    ${marked.parse(text)}
+                    <div class="msg-actions">
+                        <button class="msg-btn" onclick="copyToClipboard('${text.replace(/'/g, "\\'")}')">📋</button>
+                        <button class="msg-btn" onclick="speak('${text.replace(/'/g, "\\'")}')">🔊</button>
+                    </div>
+                </div>
                 <div class="msg-info">${role === 'user' ? 'You' : 'AI'} • ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
             `;
             chatArea.appendChild(msgDiv);
@@ -919,13 +1413,45 @@
         }
 
         async function sendMessage() {
-            const text = msgInput.value.trim();
-            if (!text) return;
+            let text = msgInput.value.trim();
+            const currentPending = [...pending];
+            if (!text && currentPending.length === 0) return;
 
             msgInput.value = '';
             msgInput.style.height = 'auto';
-            addMessage('user', text);
-            history.push({ role: 'user', content: text });
+            pending = [];
+            renderPreview();
+
+            // Include file text in message
+            let fileText = "";
+            currentPending.filter(p => p.type === 'text').forEach(p => {
+                fileText += `\n[File: ${p.name}]\n${p.content}\n`;
+            });
+            const fullUserText = text + fileText;
+
+            // Web Search
+            if (webSearchEnabled && text) {
+                const searchData = await webSearchAsync(text);
+                if (searchData) {
+                    text = `Context from Web: ${searchData}\n\nUser Question: ${text}`;
+                }
+            }
+
+            const userImages = currentPending.filter(p => p.type === 'image').map(p => p.b64);
+            addMessage('user', fullUserText, userImages);
+
+            const systemPrompt = localStorage.getItem(SYSTEM_PROMPT_KEY) || "";
+            const messages = [];
+            if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+
+            // Add session history
+            history.forEach(h => messages.push(h));
+
+            // New message
+            const newMsg = { role: 'user', content: fullUserText };
+            if (userImages.length > 0) newMsg.images = userImages;
+            messages.push(newMsg);
+            history.push(newMsg);
 
             const aiMsgDiv = document.createElement('div');
             aiMsgDiv.className = 'msg ai';
@@ -939,13 +1465,13 @@
                     method: 'POST',
                     body: JSON.stringify({
                         model: modelSelect.value,
-                        messages: history,
+                        messages: messages,
                         stream: true
                     })
                 });
 
                 const reader = response.body.getReader();
-                let fullText = '';
+                let fullAiText = '';
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -953,15 +1479,23 @@
                     const lines = chunk.split('\n');
                     for (const line of lines) {
                         if (!line) continue;
-                        const json = JSON.parse(line);
-                        if (json.message) {
-                            fullText += json.message.content;
-                            bubble.innerHTML = marked.parse(fullText);
-                        }
+                        try {
+                            const json = JSON.parse(line);
+                            if (json.message) {
+                                fullAiText += json.message.content;
+                                bubble.innerHTML = marked.parse(fullAiText) + `
+                                    <div class="msg-actions">
+                                        <button class="msg-btn" onclick="copyToClipboard('${fullAiText.replace(/'/g, "\\'")}')">📋</button>
+                                        <button class="msg-btn" onclick="speak('${fullAiText.replace(/'/g, "\\'")}')">🔊</button>
+                                    </div>
+                                `;
+                            }
+                        } catch (e) { }
                     }
                 }
-                history.push({ role: 'assistant', content: fullText });
+                history.push({ role: 'assistant', content: fullAiText });
                 saveCurrentSession();
+                chatArea.scrollTop = chatArea.scrollHeight;
             } catch (e) {
                 bubble.innerHTML = 'Error connecting to Ollama';
             }
@@ -1009,12 +1543,37 @@
 
         function renderHistory() {
             const list = document.getElementById('historyList');
+            const t = i18n[currentLang];
             list.innerHTML = sessions.map(s => `
-                <div class="chip" style="width:100%; text-align:left; justify-content: flex-start;" onclick="loadSession('${s.id}')">
-                    <div style="font-weight:600">${s.name}</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted)">${s.messages.length} messages</div>
+                <div class="chip" style="width:100%; text-align:left; justify-content: flex-start; display: flex; align-items: center; gap: 0.5rem;" onclick="loadSession('${s.id}')">
+                    <div style="flex:1">
+                        <div style="font-weight:600">${s.name}</div>
+                        <div style="font-size:0.7rem; color:var(--text-muted)">${s.messages.length} messages</div>
+                    </div>
+                    <button class="msg-btn" onclick="event.stopPropagation(); renameSession('${s.id}')">✏️</button>
+                    <button class="msg-btn" onclick="event.stopPropagation(); deleteSession('${s.id}')">🗑️</button>
                 </div>
             `).join('');
+            list.innerHTML += `<button class="auth-btn" onclick="downloadMarkdown()" style="margin-top: 1rem;">⬇️ Download History (.md)</button>`;
+        }
+
+        function deleteSession(id) {
+            if (confirm("Delete this session?")) {
+                sessions = sessions.filter(s => s.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+                renderHistory();
+                if (activeId === id) location.reload();
+            }
+        }
+
+        function renameSession(id) {
+            const session = sessions.find(s => s.id === id);
+            const newName = prompt("New session name:", session.name);
+            if (newName) {
+                session.name = newName;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+                renderHistory();
+            }
         }
 
         function loadSession(id) {
@@ -1030,10 +1589,28 @@
             switchTab('chat');
         }
 
+        function updateLocalization() {
+            const t = i18n[currentLang];
+            document.querySelector('.brand-name').textContent = "Local AI";
+            document.getElementById('msgInput').placeholder = t.chatPlaceholder;
+            const welcome = document.getElementById('welcomeView');
+            if (welcome) {
+                welcome.querySelector('h2').textContent = t.welcomeTitle;
+            }
+            // Update nav labels if they exist
+            const navLabels = document.querySelectorAll('.nav-label');
+            if (navLabels.length >= 3) {
+                navLabels[0].textContent = "Chat";
+                navLabels[1].textContent = "Themes";
+                navLabels[2].textContent = "History";
+            }
+        }
+
         // --- Init ---
         function init() {
             checkAuth();
             checkConnection();
+            updateLocalization();
             setInterval(checkConnection, 10000);
 
             // Theme init
